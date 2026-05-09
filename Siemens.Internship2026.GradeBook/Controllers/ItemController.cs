@@ -7,56 +7,52 @@ namespace Siemens.Internship2026.GradeBook.Controllers;
 [Route("api/[controller]")]
 public class ItemController : ControllerBase
 {
-    private readonly IItemReader _reader;
+    private readonly IItemService _itemService;
 
-    public ItemController(IItemReader reader)
+    public ItemController(IItemService itemService)
     {
-        _reader = reader;
+        _itemService = itemService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAllItems()
     {
         Console.WriteLine($"[LOG] {DateTime.UtcNow}: GET api/item called");
 
-        var items = await _reader.GetAllAsync();
-        var itemList = items.ToList();
+        ItemStatsResponse stats = await _itemService.GetItemStatisticsAsync();
 
-        var totalCount = itemList.Count;
-        var averageValue = itemList.Any() ? itemList.Average(i => i.Value) : 0;
+        Console.WriteLine($"[LOG] Returning {stats.TotalCount} items, average value: {stats.AverageValue}");
 
-        Console.WriteLine($"[LOG] Returning {totalCount} items, average value: {averageValue}");
-
-        return Ok(new
-        {
-            Data = itemList,
-            Statistics = new
-            {
-                TotalCount = totalCount,
-                AverageValue = averageValue,
-                RetrievedAt = DateTime.UtcNow
-            }
-        });
+        return Ok(stats);
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetItemById(int id)
     {
         Console.WriteLine($"[LOG] {DateTime.UtcNow}: GET api/item/{id} called");
 
-        if (id <= 0)
+        if (id <= 0) 
         {
             Console.WriteLine($"[LOG] Invalid id: {id}");
             return BadRequest("Id must be a positive integer.");
         }
 
-        var item = await _reader.GetByIdAsync(id);
+        var item = await _itemService.GetItemByIdAsync(id);
+
         if (item == null)
         {
             Console.WriteLine($"[LOG] Item {id} not found");
             return NotFound($"Item with Id {id} was not found.");
         }
-
         return Ok(item);
+    }
+
+    [HttpGet("filter/{n}")]
+    public async Task<IActionResult> GetFilteredItems(int n)
+    {
+        Console.WriteLine($"[LOG] {DateTime.UtcNow}: GET api/item/filter/{n} called");
+
+        var results = await _itemService.GetFilteredItemsAsync(n);
+        return Ok(results);
     }
 }
